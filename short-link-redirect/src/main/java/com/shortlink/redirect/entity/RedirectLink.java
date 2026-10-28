@@ -23,6 +23,9 @@ public class RedirectLink {
 
     private String code;
 
+    /** 创建者，用于配额计数；旧缓存里没有该字段时为 null。 */
+    private Long userId;
+
     private String originUrl;
 
     private String passwordHash;
@@ -49,6 +52,14 @@ public class RedirectLink {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getOriginUrl() {

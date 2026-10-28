@@ -55,6 +55,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final SmsSender smsSender;
     private final AvatarStorage avatarStorage;
+    private final QuotaService quotaService;
     private final long codeExpireSeconds;
     private final long refreshSeconds;
     private final boolean mock;
@@ -65,6 +66,7 @@ public class AuthService {
                        JwtService jwtService,
                        SmsSender smsSender,
                        AvatarStorage avatarStorage,
+                       QuotaService quotaService,
                        @Value("${shortlink.sms.code-expire-seconds:300}") long codeExpireSeconds,
                        @Value("${shortlink.sms.mock:true}") boolean mock,
                        @Value("${shortlink.jwt.refresh-seconds:604800}") long refreshSeconds) {
@@ -74,6 +76,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.smsSender = smsSender;
         this.avatarStorage = avatarStorage;
+        this.quotaService = quotaService;
         this.codeExpireSeconds = codeExpireSeconds;
         this.mock = mock;
         this.refreshSeconds = refreshSeconds;
@@ -127,9 +130,21 @@ public class AuthService {
         } catch (DuplicateKeyException e) {
             throw new BizException(ResultCode.PHONE_REGISTERED);
         }
+        initQuota(user.getId());
 
         redisTemplate.delete(RedisKeys.smsCode(request.getPhone()));
         return issueToken(user);
+    }
+
+    /**
+     * 配额是附加能力，初始化失败不能阻塞注册。
+     */
+    private void initQuota(long userId) {
+        try {
+            quotaService.initForNewUser(userId);
+        } catch (Exception e) {
+            log.warn("初始化用户配额失败 userId={}", userId, e);
+        }
     }
 
     public AuthResponse login(LoginRequest request) {

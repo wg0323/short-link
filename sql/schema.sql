@@ -34,6 +34,65 @@ CREATE TABLE `user`
   DEFAULT CHARSET = utf8mb4 COMMENT ='注册用户';
 
 -- ------------------------------------------------------------
+-- 套餐模板
+-- 当前未接支付，只有 free 在售，其余行只作为对外报价的参考数据
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `quota_package`;
+CREATE TABLE `quota_package`
+(
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `code`           VARCHAR(32)     NOT NULL COMMENT '套餐编码',
+    `name`           VARCHAR(50)     NOT NULL COMMENT '套餐名',
+    `total_generate` BIGINT                   DEFAULT NULL COMMENT '累计新建上限，NULL 不限',
+    `daily_generate` BIGINT                   DEFAULT NULL COMMENT '每日新建上限，NULL 不限',
+    `total_click`    BIGINT                   DEFAULT NULL COMMENT '累计访问上限，NULL 不限',
+    `price_cents`    INT             NOT NULL DEFAULT 0 COMMENT '价格（分），0 表示免费',
+    `months`         INT             NOT NULL DEFAULT 0 COMMENT '有效期月数，0 表示长期',
+    `status`         TINYINT         NOT NULL DEFAULT 0 COMMENT '1 在售 0 未开放',
+    `created_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_code` (`code`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='套餐模板';
+
+-- ------------------------------------------------------------
+-- 用户配额：权威值落库，实时值在 Redis，每日对账
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `user_quota`;
+CREATE TABLE `user_quota`
+(
+    `user_id`        BIGINT UNSIGNED NOT NULL COMMENT '用户 ID，与 user 一对一',
+    `package_code`   VARCHAR(32)     NOT NULL DEFAULT 'free' COMMENT '当前套餐',
+    `total_generate` BIGINT                   DEFAULT NULL COMMENT '下单时的快照，NULL 不限',
+    `daily_generate` BIGINT                   DEFAULT NULL COMMENT '每日新建上限，NULL 不限',
+    `total_click`    BIGINT                   DEFAULT NULL COMMENT '累计访问上限，NULL 不限',
+    `used_generate`  BIGINT          NOT NULL DEFAULT 0 COMMENT '已用新建数',
+    `used_click`     BIGINT          NOT NULL DEFAULT 0 COMMENT '已用访问数',
+    `period_start`   DATE            NOT NULL,
+    `period_end`     DATE                     DEFAULT NULL COMMENT 'NULL 表示长期有效',
+    `status`         TINYINT         NOT NULL DEFAULT 1 COMMENT '1 正常 2 已超限 3 已过期',
+    `created_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`user_id`),
+    KEY `idx_period_end` (`period_end`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='用户配额';
+
+-- ------------------------------------------------------------
+-- 每日新建计数，Redis 丢数据时用于对账恢复
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `user_quota_daily`;
+CREATE TABLE `user_quota_daily`
+(
+    `user_id`   BIGINT UNSIGNED NOT NULL,
+    `stat_date` DATE            NOT NULL,
+    `generated` BIGINT          NOT NULL DEFAULT 0,
+    PRIMARY KEY (`user_id`, `stat_date`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='每日新建计数';
+
+-- ------------------------------------------------------------
 -- 短链域名（后台维护，用户在生成时选择）
 -- ------------------------------------------------------------
 DROP TABLE IF EXISTS `domain`;
@@ -69,6 +128,7 @@ CREATE TABLE `short_link`
     `end_at`        DATETIME                 DEFAULT NULL COMMENT '生效结束时间',
     `expire_at`     DATETIME                 DEFAULT NULL COMMENT '到期时间',
     `status`        TINYINT         NOT NULL DEFAULT 1 COMMENT '1 正常 0 禁用 2 已删除',
+    `quota_blocked` TINYINT         NOT NULL DEFAULT 0 COMMENT '1 因创建者配额耗尽而暂停',
     `click_count`   BIGINT          NOT NULL DEFAULT 0 COMMENT '累计点击（冗余字段）',
     `created_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -191,3 +251,22 @@ VALUES ('localhost:8081', 1, 1),
 
 INSERT INTO `segment` (`biz_tag`, `max_id`, `step`)
 VALUES ('short_link', 100000, 1000);
+
+-- 套餐模板：只开 free，其余先占位（支付未接入）
+INSERT INTO `quota_package` (`code`, `name`, `total_generate`, `daily_generate`, `total_click`,
+                             `price_cents`, `months`, `status`)
+VALUES ('free', '免费用户', NULL, 100, NULL, 0, 0, 1),
+       ('trial', '体验版', NULL, NULL, 1000000, 68800, 3, 0),
+       ('basic', '初级版', NULL, NULL, 1000000, 126000, 12, 0),
+       ('standard', '标准版', NULL, NULL, 15000000, 980000, 12, 0),
+       ('enterprise', '企业版', NULL, NULL, 100000000, 6000000, 12, 0);
+
+-- 存量用户补一份免费配额
+INSERT INTO `user_quota` (`user_id`, `package_code`, `daily_generate`, `used_generate`, `used_click`,
+                          `period_start`, `status`)
+SELECT u.id, 'free', 100,
+       (SELECT COUNT(*) FROM `short_link` l WHERE l.user_id = u.id), 0,
+       CURRENT_DATE, 1
+FROM `user` u
+LEFT JOIN `user_quota` q ON q.user_id = u.id
+WHERE q.user_id IS NULL;

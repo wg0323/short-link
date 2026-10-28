@@ -9,6 +9,8 @@ public class ClickEvent {
 
     private final String code;
 
+    private final Long userId;
+
     private final LocalDateTime clickAt;
 
     private final String ip;
@@ -23,9 +25,10 @@ public class ClickEvent {
 
     private final String ua;
 
-    public ClickEvent(String code, LocalDateTime clickAt, String ip, String province, String city,
-                      String device, String referer, String ua) {
+    public ClickEvent(String code, Long userId, LocalDateTime clickAt, String ip, String province,
+                      String city, String device, String referer, String ua) {
         this.code = code;
+        this.userId = userId;
         this.clickAt = clickAt;
         this.ip = ip;
         this.province = province;
@@ -37,6 +40,10 @@ public class ClickEvent {
 
     public String getCode() {
         return code;
+    }
+
+    public Long getUserId() {
+        return userId;
     }
 
     public LocalDateTime getClickAt() {

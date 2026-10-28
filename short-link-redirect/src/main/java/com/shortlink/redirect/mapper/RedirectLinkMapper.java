@@ -11,7 +11,7 @@ import java.util.List;
 @Mapper
 public interface RedirectLinkMapper extends BaseMapper<RedirectLink> {
 
-    @Select("SELECT id, code, origin_url, password_hash, start_at, end_at, expire_at, status "
+    @Select("SELECT id, code, user_id, origin_url, password_hash, start_at, end_at, expire_at, status "
             + "FROM short_link WHERE code = #{code} LIMIT 1")
     RedirectLink selectByCode(@Param("code") String code);
 

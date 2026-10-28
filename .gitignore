@@ -11,6 +11,7 @@ node_modules/
 # 日志与临时文件
 *.log
 logs/
+_commit_msg.txt
 
 # 运行期目录（头像已改存 MinIO，这里兜底）
 uploads/

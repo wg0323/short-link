@@ -62,6 +62,14 @@ public final class RedisKeys {
         return PREFIX + "admin:captcha:" + captchaId;
     }
 
+    /**
+     * 用户累计点击计数（配额用）。
+     * 只做实时值，权威值在 user_quota，由每日对账写回。
+     */
+    public static String quotaClickTotal(long userId) {
+        return PREFIX + "q:click:" + userId;
+    }
+
     /** 短链跳转缓存：sl:link:{code}。 */
     public static String link(String code) {
         return PREFIX + "link:" + code;

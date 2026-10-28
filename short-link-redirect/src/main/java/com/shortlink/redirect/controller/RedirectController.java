@@ -143,7 +143,7 @@ public class RedirectController {
         String ua = request.getHeader("User-Agent");
         String referer = request.getHeader("Referer");
         String[] region = ipRegionService.resolve(ip);
-        clickEventPublisher.publish(new ClickEvent(link.getCode(), LocalDateTime.now(), ip,
+        clickEventPublisher.publish(new ClickEvent(link.getCode(), link.getUserId(), LocalDateTime.now(), ip,
                 region[0], region[1], UserAgentParser.parse(ua),
                 referer == null ? "" : referer, ua == null ? "" : ua));
     }

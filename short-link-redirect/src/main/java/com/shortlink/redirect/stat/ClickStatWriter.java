@@ -73,6 +73,10 @@ public class ClickStatWriter {
             String province = event.getProvince() == null || event.getProvince().isEmpty()
                     ? "未知" : event.getProvince();
             connection.hIncrBy(key(RedisKeys.statRegion(code, date)), bytes(province), 1);
+            // 配额计数：只累计不拦截，跨阈值后的处理在下一阶段接入
+            if (event.getUserId() != null) {
+                connection.incrBy(key(RedisKeys.quotaClickTotal(event.getUserId())), 1L);
+            }
             // 维护当天的短码集合，供次日聚合任务遍历（避免用 KEYS 扫描）
             connection.sAdd(key(RedisKeys.statCodes(date)), bytes(code));
         }
