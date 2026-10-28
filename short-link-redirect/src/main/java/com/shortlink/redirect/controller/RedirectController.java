@@ -126,6 +126,9 @@ public class RedirectController {
         if (link.getStatus() == RedirectLink.STATUS_DISABLED) {
             return "该链接已被禁用";
         }
+        if (link.getQuotaBlocked() != null && link.getQuotaBlocked() == 1) {
+            return "该链接暂时无法访问，请稍后再试";
+        }
         if (link.getExpireAt() != null && link.getExpireAt().isBefore(now)) {
             return "该链接已过期";
         }

@@ -38,6 +38,9 @@ public class RedirectLink {
 
     private Integer status;
 
+    /** 1 表示因创建者配额耗尽而暂停。 */
+    private Integer quotaBlocked;
+
     public Long getId() {
         return id;
     }
@@ -108,5 +111,13 @@ public class RedirectLink {
 
     public void setStatus(Integer status) {
         this.status = status;
+    }
+
+    public Integer getQuotaBlocked() {
+        return quotaBlocked;
+    }
+
+    public void setQuotaBlocked(Integer quotaBlocked) {
+        this.quotaBlocked = quotaBlocked;
     }
 }
