@@ -1,0 +1,50 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: short-link-redirect
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/short_link?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 3000
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    database: 0
+    timeout: 3000ms
+  thymeleaf:
+    cache: true
+    encoding: UTF-8
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+shortlink:
+  redirect:
+    # L1 本地缓存条目数与存活时间
+    local-cache-size: 10000
+    local-cache-seconds: 60
+    # L2 Redis 缓存时间（秒），实际写入时会叠加 0-300 秒随机抖动
+    redis-cache-seconds: 1800
+    # 访问密码校验通过后的通行证有效期（秒）
+    password-ticket-seconds: 300

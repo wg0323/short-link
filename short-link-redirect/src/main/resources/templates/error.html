@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>ShortLink</title>
+    <style>
+        :root {
+            --ink-900: #0b1220;
+            --ink-400: #94a3b8;
+            --ink-300: #cbd5e1;
+            --brand: #2563eb;
+            --line: rgba(255, 255, 255, .1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: var(--ink-900);
+            color: #fff;
+            font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .wrap {
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 650;
+            letter-spacing: -.01em;
+        }
+
+        .mark {
+            display: grid;
+            place-items: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            background: linear-gradient(140deg, #3b82f6, #1d4ed8);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status {
+            margin: 40px 0 0;
+            font-size: 13px;
+            letter-spacing: .18em;
+            color: var(--ink-400);
+        }
+
+        h1 {
+            margin: 12px 0 0;
+            font-size: 26px;
+            font-weight: 650;
+            letter-spacing: -.02em;
+        }
+
+        .msg {
+            margin: 14px 0 0;
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--ink-400);
+        }
+
+        .card {
+            margin-top: 32px;
+            padding: 22px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, .03);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
+            padding: 0 22px;
+            border: none;
+            border-radius: 9px;
+            background: var(--brand);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 550;
+            cursor: pointer;
+            transition: background .18s ease;
+        }
+
+        .btn:hover {
+            background: #1d4ed8;
+        }
+
+        .foot {
+            margin-top: 28px;
+            font-size: 12px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+<main class="wrap">
+    <div class="brand"><span class="mark">S</span>ShortLink</div>
+
+    <p class="status" th:text="${status}">404</p>
+    <h1 th:text="${title} ?: '请求出错'">链接不存在</h1>
+    <p class="msg" th:text="${message} ?: '请稍后重试'">请检查地址是否输入正确</p>
+
+    <div class="card">
+        <button class="btn" type="button" onclick="history.back()">返回上一页</button>
+    </div>
+
+    <p class="foot">如果你认为这是一个错误，请联系短链的创建者</p>
+</main>
+</body>
+</html>
