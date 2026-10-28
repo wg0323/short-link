@@ -70,6 +70,16 @@ public final class RedisKeys {
         return PREFIX + "q:click:" + userId;
     }
 
+    /** 用户某个自然日的已新建条数。 */
+    public static String quotaGenerateDaily(long userId, String date) {
+        return PREFIX + "q:gen:" + userId + ":" + date;
+    }
+
+    /** 用户累计新建条数。 */
+    public static String quotaGenerateTotal(long userId) {
+        return PREFIX + "q:gen:total:" + userId;
+    }
+
     /** 短链跳转缓存：sl:link:{code}。 */
     public static String link(String code) {
         return PREFIX + "link:" + code;

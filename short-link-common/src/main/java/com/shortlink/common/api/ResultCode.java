@@ -16,6 +16,8 @@ public enum ResultCode {
     CODE_ILLEGAL(40006, "短码不合法"),
     PASSWORD_TOO_WEAK(40007, "密码强度不足"),
     SMS_SEND_TOO_FREQUENT(40008, "验证码发送过于频繁"),
+    QUOTA_DAILY_EXCEEDED(40010, "今日新建额度已用完，明天再试或升级套餐"),
+    QUOTA_TOTAL_EXCEEDED(40011, "新建额度已用完，请升级套餐"),
 
     UNAUTHORIZED(40100, "登录已失效"),
     FORBIDDEN(40300, "无权访问"),

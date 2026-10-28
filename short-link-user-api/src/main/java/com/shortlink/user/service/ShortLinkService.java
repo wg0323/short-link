@@ -45,16 +45,19 @@ public class ShortLinkService {
     private final UrlSecurityValidator urlSecurityValidator;
     private final PasswordEncoder passwordEncoder;
     private final LinkCachePublisher linkCachePublisher;
+    private final QuotaService quotaService;
 
     public ShortLinkService(ShortLinkMapper shortLinkMapper, DomainService domainService,
                             CodeGenerator codeGenerator, UrlSecurityValidator urlSecurityValidator,
-                            PasswordEncoder passwordEncoder, LinkCachePublisher linkCachePublisher) {
+                            PasswordEncoder passwordEncoder, LinkCachePublisher linkCachePublisher,
+                            QuotaService quotaService) {
         this.shortLinkMapper = shortLinkMapper;
         this.domainService = domainService;
         this.codeGenerator = codeGenerator;
         this.urlSecurityValidator = urlSecurityValidator;
         this.passwordEncoder = passwordEncoder;
         this.linkCachePublisher = linkCachePublisher;
+        this.quotaService = quotaService;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -76,6 +79,9 @@ public class ShortLinkService {
             }
         }
 
+        // 幂等复用不扣额度，确认要新建才计数
+        quotaService.consumeGenerate(userId);
+
         ShortLink link = new ShortLink();
         link.setCode(customCode != null ? customCode : codeGenerator.nextCode());
         link.setDomainId(domain.getId());
@@ -96,6 +102,7 @@ public class ShortLinkService {
         try {
             shortLinkMapper.insert(link);
         } catch (DuplicateKeyException e) {
+            quotaService.refundGenerate(userId);
             if (customCode != null) {
                 throw new BizException(ResultCode.CODE_OCCUPIED);
             }
