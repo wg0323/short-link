@@ -3,8 +3,10 @@ package com.shortlink.user.controller;
 import com.shortlink.common.api.Result;
 import com.shortlink.common.security.UserContext;
 import com.shortlink.user.dto.ChangePasswordRequest;
+import com.shortlink.user.dto.QuotaVO;
 import com.shortlink.user.dto.UpdateProfileRequest;
 import com.shortlink.user.dto.UserProfileVO;
+import com.shortlink.user.service.QuotaService;
 import com.shortlink.user.service.UserProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,8 +28,11 @@ public class UserController {
 
     private final UserProfileService userProfileService;
 
-    public UserController(UserProfileService userProfileService) {
+    private final QuotaService quotaService;
+
+    public UserController(UserProfileService userProfileService, QuotaService quotaService) {
         this.userProfileService = userProfileService;
+        this.quotaService = quotaService;
     }
 
     @Operation(summary = "查询个人信息")
@@ -55,5 +60,11 @@ public class UserController {
     @PostMapping("/avatar")
     public Result<UserProfileVO> uploadAvatar(@RequestPart("file") MultipartFile file) {
         return Result.ok(userProfileService.updateAvatar(UserContext.require(), file));
+    }
+
+    @Operation(summary = "查询套餐与用量")
+    @GetMapping("/quota")
+    public Result<QuotaVO> quota() {
+        return Result.ok(quotaService.overview(UserContext.require()));
     }
 }

@@ -13,6 +13,17 @@ export interface AuthResponse {
   user: UserProfile
 }
 
+export interface QuotaOverview {
+  packageCode: string
+  packageName: string
+  totalGenerate: number | null
+  dailyGenerate: number | null
+  totalClick: number | null
+  usedGenerate: number
+  usedClick: number
+  dailyGenerated: number
+}
+
 export interface DomainItem {
   id: number
   domain: string

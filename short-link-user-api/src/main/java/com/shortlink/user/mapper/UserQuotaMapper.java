@@ -5,12 +5,16 @@ import com.shortlink.user.entity.UserQuota;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDate;
 
 @Mapper
 public interface UserQuotaMapper extends BaseMapper<UserQuota> {
+
+    @Select("SELECT name FROM quota_package WHERE code = #{code}")
+    String selectPackageName(@Param("code") String code);
 
     /**
      * 用 GREATEST 覆盖：Redis 丢过数据时只会保留更大的历史值，不会把已用量改小。

@@ -1,5 +1,5 @@
 import { request } from './http'
-import type { AuthResponse, UserProfile } from './types'
+import type { AuthResponse, QuotaOverview, UserProfile } from './types'
 
 export function sendSms(phone: string) {
   return request<{ mockCode: string | null }>({
@@ -46,4 +46,8 @@ export function changePassword(oldPassword: string, newPassword: string) {
     method: 'put',
     data: { oldPassword, newPassword }
   })
+}
+
+export function fetchQuota() {
+  return request<QuotaOverview | null>({ url: '/user/quota' })
 }

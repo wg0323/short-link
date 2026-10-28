@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { updateNickname, uploadAvatar } from '@/api/auth'
+import { fetchQuota, updateNickname, uploadAvatar } from '@/api/auth'
+import type { QuotaOverview } from '@/api/types'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
@@ -11,13 +12,26 @@ const nicknameVisible = ref(false)
 const savingName = ref(false)
 const nicknameForm = reactive({ nickname: '' })
 const fileInput = ref<HTMLInputElement>()
+const quota = ref<QuotaOverview | null>(null)
 
 const profile = computed(() => userStore.profile)
 const initial = computed(() => (profile.value?.nickname || '用').slice(-1))
-
-onMounted(() => {
-  userStore.loadProfile().catch(() => undefined)
+const dailyPercent = computed(() => {
+  const limit = quota.value?.dailyGenerate
+  if (!limit) {
+    return null
+  }
+  return Math.min(100, Math.round(((quota.value?.dailyGenerated ?? 0) / limit) * 100))
 })
+
+onMounted(async () => {
+  userStore.loadProfile().catch(() => undefined)
+  quota.value = (await fetchQuota().catch(() => null)) ?? null
+})
+
+function limitText(value?: number | null) {
+  return value == null ? '不限' : value.toLocaleString()
+}
 
 function openNicknameDialog() {
   nicknameForm.nickname = profile.value?.nickname || ''
@@ -116,6 +130,33 @@ async function onAvatarChange(event: Event) {
       </div>
     </section>
 
+    <section v-if="quota" class="sl-card block quota">
+      <h2>套餐与用量</h2>
+      <div class="row">
+        <span class="label">当前套餐</span>
+        <span class="value">{{ quota.packageName || quota.packageCode }}</span>
+      </div>
+      <div class="row">
+        <span class="label">今日新建</span>
+        <span class="value num">{{ quota.dailyGenerated }} / {{ limitText(quota.dailyGenerate) }}</span>
+      </div>
+      <el-progress
+        v-if="dailyPercent !== null"
+        class="bar"
+        :percentage="dailyPercent"
+        :show-text="false"
+        :stroke-width="6"
+      />
+      <div class="row">
+        <span class="label">累计新建</span>
+        <span class="value num">{{ quota.usedGenerate }} / {{ limitText(quota.totalGenerate) }}</span>
+      </div>
+      <div class="row">
+        <span class="label">累计访问</span>
+        <span class="value num">{{ quota.usedClick.toLocaleString() }} / {{ limitText(quota.totalClick) }}</span>
+      </div>
+    </section>
+
     <el-dialog v-model="nicknameVisible" title="修改昵称" width="420px">
       <el-form label-position="top">
         <el-form-item label="昵称">
@@ -134,6 +175,14 @@ async function onAvatarChange(event: Event) {
 .block {
   max-width: 860px;
   padding: 20px 22px;
+}
+
+.quota {
+  margin-top: 16px;
+}
+
+.bar {
+  margin: 2px 0 6px;
 }
 
 h2 {

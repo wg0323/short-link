@@ -3,6 +3,7 @@ package com.shortlink.user.service;
 import com.shortlink.common.api.ResultCode;
 import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.common.exception.BizException;
+import com.shortlink.user.dto.QuotaVO;
 import com.shortlink.user.entity.UserQuota;
 import com.shortlink.user.mapper.UserQuotaMapper;
 import org.slf4j.Logger;
@@ -88,6 +89,43 @@ public class QuotaService {
         quota.setPeriodStart(LocalDate.now());
         quota.setStatus(1);
         userQuotaMapper.insert(quota);
+    }
+
+    /**
+     * 套餐与用量。配额记录缺失时返回 null，前端不展示该卡片。
+     */
+    public QuotaVO overview(long userId) {
+        UserQuota quota = userQuotaMapper.selectById(userId);
+        if (quota == null) {
+            return null;
+        }
+        QuotaVO vo = new QuotaVO();
+        vo.setPackageCode(quota.getPackageCode());
+        vo.setPackageName(userQuotaMapper.selectPackageName(quota.getPackageCode()));
+        vo.setTotalGenerate(quota.getTotalGenerate());
+        vo.setDailyGenerate(quota.getDailyGenerate());
+        vo.setTotalClick(quota.getTotalClick());
+        vo.setUsedGenerate(readCounter(RedisKeys.quotaGenerateTotal(userId), quota.getUsedGenerate()));
+        vo.setUsedClick(readCounter(RedisKeys.quotaClickTotal(userId), quota.getUsedClick()));
+        vo.setDailyGenerated(readCounter(
+                RedisKeys.quotaGenerateDaily(userId, LocalDate.now().toString()), 0L));
+        return vo;
+    }
+
+    /**
+     * 实时值优先，Redis 被清过时回退到库内快照。
+     */
+    private long readCounter(String key, Long fallback) {
+        long snapshot = fallback == null ? 0L : fallback;
+        String value = redisTemplate.opsForValue().get(key);
+        if (value == null || value.isEmpty()) {
+            return snapshot;
+        }
+        try {
+            return Math.max(Long.parseLong(value), snapshot);
+        } catch (NumberFormatException e) {
+            return snapshot;
+        }
     }
 
     /**
