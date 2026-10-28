@@ -48,3 +48,8 @@ shortlink:
     redis-cache-seconds: 1800
     # 访问密码校验通过后的通行证有效期（秒）
     password-ticket-seconds: 300
+  sentinel:
+    # 留空则不连 Dashboard / 不从 Nacos 拉规则
+    dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+    nacos-server: ${NACOS_SERVER:127.0.0.1:8848}
+    nacos-group: ${SENTINEL_GROUP:SENTINEL_GROUP}

@@ -1,5 +1,9 @@
 package com.shortlink.redirect.controller;
 
+import com.alibaba.csp.sentinel.Entry;
+import com.alibaba.csp.sentinel.EntryType;
+import com.alibaba.csp.sentinel.SphU;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.shortlink.common.util.Base62;
 import com.shortlink.common.util.IpUtils;
 import com.shortlink.redirect.bloom.BloomFilterService;
@@ -39,6 +43,9 @@ public class RedirectController {
 
     private static final Logger log = LoggerFactory.getLogger(RedirectController.class);
 
+    /** Sentinel 资源名，流控与热点参数规则都挂到它上面。 */
+    private static final String RESOURCE_REDIRECT = "redirect:click";
+
     private final BloomFilterService bloomFilterService;
     private final LinkCacheService linkCacheService;
     private final ClickEventPublisher clickEventPublisher;
@@ -58,7 +65,10 @@ public class RedirectController {
     @GetMapping("/{code}")
     public ModelAndView redirect(@PathVariable String code, HttpServletRequest request,
                                  HttpServletResponse response) {
+        Entry entry = null;
         try {
+            // 热点参数取 code，用于拦单条爆款短链
+            entry = SphU.entry(RESOURCE_REDIRECT, EntryType.IN, 1, code);
             RedirectLink link = resolve(code);
             if (link == null) {
                 return errorView(404, "链接不存在", "请检查地址是否输入正确");
@@ -72,9 +82,16 @@ public class RedirectController {
             }
             publishClick(link, request);
             return redirectTo(link.getOriginUrl(), response);
+        } catch (BlockException e) {
+            log.warn("跳转被 Sentinel 拦截 code={} rule={}", code, e.getRule() == null ? "-" : e.getRule().getResource());
+            return errorView(429, "访问太频繁", "请稍后再试");
         } catch (Exception e) {
             log.error("跳转处理异常 code={}", code, e);
             return errorView(500, "服务暂时不可用", "请稍后重试");
+        } finally {
+            if (entry != null) {
+                entry.exit(1, code);
+            }
         }
     }
 

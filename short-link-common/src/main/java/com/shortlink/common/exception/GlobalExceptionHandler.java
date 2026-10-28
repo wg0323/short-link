@@ -1,5 +1,6 @@
 package com.shortlink.common.exception;
 
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.shortlink.common.api.Result;
 import com.shortlink.common.api.ResultCode;
 import org.slf4j.Logger;
@@ -47,6 +48,14 @@ public class GlobalExceptionHandler {
             default:
                 return HttpStatus.OK;
         }
+    }
+
+    @ExceptionHandler(BlockException.class)
+    public ResponseEntity<Result<Void>> handleBlock(BlockException e) {
+        log.warn("请求被 Sentinel 拦截 resource={} rule={}", e.getRule() == null ? "-" : e.getRule().getResource(),
+                e.getClass().getSimpleName());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(Result.fail(ResultCode.RATE_LIMITED, "请求过于频繁，请稍后再试"));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})

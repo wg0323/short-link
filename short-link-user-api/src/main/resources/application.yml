@@ -78,3 +78,8 @@ shortlink:
     access-key: ${MINIO_ACCESS_KEY:admin}
     secret-key: ${MINIO_SECRET_KEY:12345678}
     bucket: ${MINIO_BUCKET:short-link}
+  sentinel:
+    # 留空则不连 Dashboard / 不从 Nacos 拉规则
+    dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+    nacos-server: ${NACOS_SERVER:127.0.0.1:8848}
+    nacos-group: ${SENTINEL_GROUP:SENTINEL_GROUP}
