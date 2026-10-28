@@ -4,6 +4,7 @@ import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.common.util.DigestUtils;
 import com.shortlink.redirect.event.ClickEvent;
 import com.shortlink.redirect.mapper.ClickLogMapper;
+import com.shortlink.redirect.support.QuotaLimitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -16,6 +17,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 把一批点击同时写进 Redis 计数与 MySQL 明细。
@@ -32,9 +36,13 @@ public class ClickStatWriter {
 
     private final ClickLogMapper clickLogMapper;
 
-    public ClickStatWriter(StringRedisTemplate redisTemplate, ClickLogMapper clickLogMapper) {
+    private final QuotaLimitService quotaLimitService;
+
+    public ClickStatWriter(StringRedisTemplate redisTemplate, ClickLogMapper clickLogMapper,
+                           QuotaLimitService quotaLimitService) {
         this.redisTemplate = redisTemplate;
         this.clickLogMapper = clickLogMapper;
+        this.quotaLimitService = quotaLimitService;
     }
 
     public void write(List<ClickEvent> events) {
@@ -42,7 +50,25 @@ public class ClickStatWriter {
             return;
         }
         countInRedis(events);
+        checkQuota(events);
         insertDetail(events);
+    }
+
+    /**
+     * 累计点击跨过套餐上限时暂停该用户的短链，异常不影响统计写入。
+     */
+    private void checkQuota(List<ClickEvent> events) {
+        try {
+            Set<Long> userIds = events.stream()
+                    .map(ClickEvent::getUserId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            if (!userIds.isEmpty()) {
+                quotaLimitService.check(userIds);
+            }
+        } catch (Exception e) {
+            log.warn("配额检查失败，条数={}", events.size(), e);
+        }
     }
 
     private void countInRedis(List<ClickEvent> events) {

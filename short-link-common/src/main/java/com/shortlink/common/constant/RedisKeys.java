@@ -80,6 +80,11 @@ public final class RedisKeys {
         return PREFIX + "q:gen:total:" + userId;
     }
 
+    /** 用户已因配额耗尽而暂停的标记，用于保证只处理一次。 */
+    public static String quotaBlocked(long userId) {
+        return PREFIX + "q:blocked:" + userId;
+    }
+
     /** 短链跳转缓存：sl:link:{code}。 */
     public static String link(String code) {
         return PREFIX + "link:" + code;
