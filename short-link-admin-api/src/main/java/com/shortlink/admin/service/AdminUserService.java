@@ -4,16 +4,21 @@ import com.shortlink.admin.dto.AdminUserVO;
 import com.shortlink.admin.entity.PlatformUser;
 import com.shortlink.admin.mapper.AdminUserMapper;
 import com.shortlink.admin.mapper.PlatformUserMapper;
+import com.shortlink.admin.mapper.QuotaAdminMapper;
 import com.shortlink.common.api.PageVO;
 import com.shortlink.common.api.ResultCode;
+import com.shortlink.common.cache.LinkCachePublisher;
 import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.common.exception.BizException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,18 +31,27 @@ import java.util.List;
 @Service
 public class AdminUserService {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminUserService.class);
+
     private final AdminUserMapper adminUserMapper;
 
     private final PlatformUserMapper platformUserMapper;
+
+    private final QuotaAdminMapper quotaAdminMapper;
+
+    private final LinkCachePublisher linkCachePublisher;
 
     private final PasswordEncoder passwordEncoder;
 
     private final StringRedisTemplate redisTemplate;
 
     public AdminUserService(AdminUserMapper adminUserMapper, PlatformUserMapper platformUserMapper,
+                            QuotaAdminMapper quotaAdminMapper, LinkCachePublisher linkCachePublisher,
                             PasswordEncoder passwordEncoder, StringRedisTemplate redisTemplate) {
         this.adminUserMapper = adminUserMapper;
         this.platformUserMapper = platformUserMapper;
+        this.quotaAdminMapper = quotaAdminMapper;
+        this.linkCachePublisher = linkCachePublisher;
         this.passwordEncoder = passwordEncoder;
         this.redisTemplate = redisTemplate;
     }
@@ -79,5 +93,27 @@ public class AdminUserService {
         platformUserMapper.updateById(update);
         // 让该用户其它端的刷新令牌失效，必须用新密码重新登录
         redisTemplate.delete(RedisKeys.refreshToken(userId));
+    }
+
+    /**
+     * 重置配额：清零累计用量、解除短链暂停，并清掉对应缓存。
+     *
+     * <p>套餐上限与计费周期不动——这里只是手工补一份额度，不是换套餐。</p>
+     */
+    public void resetQuota(long userId) {
+        List<String> blockedCodes = quotaAdminMapper.selectBlockedCodes(userId);
+        quotaAdminMapper.resetUsage(userId);
+        int unblocked = quotaAdminMapper.unblockLinks(userId);
+
+        redisTemplate.delete(RedisKeys.quotaClickTotal(userId));
+        redisTemplate.delete(RedisKeys.quotaGenerateTotal(userId));
+        redisTemplate.delete(RedisKeys.quotaBlocked(userId));
+        redisTemplate.delete(RedisKeys.quotaGenerateDaily(userId, LocalDate.now().toString()));
+
+        // 短链缓存里还存着 quota_blocked=1，不 evict 的话最长要等半小时才恢复
+        for (String code : blockedCodes) {
+            linkCachePublisher.evict(code);
+        }
+        log.info("重置用户配额 userId={} unblocked={} cached={}", userId, unblocked, blockedCodes.size());
     }
 }

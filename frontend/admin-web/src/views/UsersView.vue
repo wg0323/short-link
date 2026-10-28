@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageUsers, resetUserPassword, updateUserStatus, type PlatformUser } from '@/api/admin'
+import { pageUsers, resetUserPassword, resetUserQuota, updateUserStatus, type PlatformUser } from '@/api/admin'
 
 const loading = ref(false)
 const rows = ref<PlatformUser[]>([])
@@ -55,6 +55,17 @@ async function toggleStatus(row: PlatformUser) {
   )
   await updateUserStatus(row.id, next)
   ElMessage.success(`已${action}`)
+  await load()
+}
+
+async function resetQuota(row: PlatformUser) {
+  await ElMessageBox.confirm(
+    `将清零「${row.nickname || row.phone}」的累计新建与访问用量，并恢复其被暂停的短链，确定吗？`,
+    '重置配额',
+    { type: 'warning', confirmButtonText: '重置', cancelButtonText: '取消' }
+  )
+  await resetUserQuota(row.id)
+  ElMessage.success('配额已重置')
   await load()
 }
 
@@ -131,9 +142,10 @@ async function submitReset() {
         <el-table-column label="最后登录" width="180">
           <template #default="{ row }">{{ row.lastLoginAt || '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200" align="right">
+        <el-table-column label="操作" width="280" align="right">
           <template #default="{ row }">
             <el-button text type="primary" @click="openReset(row)">重置密码</el-button>
+            <el-button text @click="resetQuota(row)">重置配额</el-button>
             <el-button text :type="row.status === 1 ? 'danger' : 'success'" @click="toggleStatus(row)">
               {{ row.status === 1 ? '禁用' : '启用' }}
             </el-button>

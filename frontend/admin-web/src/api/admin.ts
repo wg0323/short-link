@@ -114,6 +114,10 @@ export function resetUserPassword(id: number, password: string) {
   return request<void>({ url: `/admin/user/${id}/password`, method: 'put', data: { password } })
 }
 
+export function resetUserQuota(id: number) {
+  return request<void>({ url: `/admin/user/${id}/quota`, method: 'put' })
+}
+
 export function listDomains() {
   return request<DomainItem[]>({ url: '/admin/domain' })
 }

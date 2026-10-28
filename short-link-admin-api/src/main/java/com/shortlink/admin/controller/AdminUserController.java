@@ -51,4 +51,11 @@ public class AdminUserController {
         adminUserService.resetPassword(id, request.getPassword());
         return Result.ok();
     }
+
+    @Operation(summary = "重置用户配额（清零用量并解除短链暂停）")
+    @PutMapping("/{id}/quota")
+    public Result<Void> resetQuota(@PathVariable long id) {
+        adminUserService.resetQuota(id);
+        return Result.ok();
+    }
 }
