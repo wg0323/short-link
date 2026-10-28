@@ -31,6 +31,7 @@ flowchart LR
 | --- | --- |
 | 后端 | JDK 1.8 + Spring Boot 2.7.18 + MyBatis-Plus 3.5.5 |
 | 存储 | MySQL 8.0.37（utf8mb4）、Redis 6.2.6、MinIO（头像对象存储） |
+| 治理 | Sentinel 1.8.8（流控 / 熔断 / 热点参数）+ Nacos 2.x（规则源） |
 | 前端 | Vue 3.5 + TypeScript 5.6 + Vite 5.4 + Element Plus 2.8 |
 | 文档 | Knife4j 4.4（`http://localhost:8080/doc.html`） |
 
@@ -52,7 +53,9 @@ short-link/
 
 ## 本地启动
 
-前置条件：JDK 8、Maven 3.9、Node 18+、MySQL 8、Redis 6.2.6、MinIO（头像对象存储）。以下命令假设这些服务都跑在默认端口。
+前置条件：JDK 8、Maven 3.9、Node 18+、MySQL 8、Redis 6.2.6、MinIO（头像对象存储）、Nacos 2.x（规则配置）、Sentinel Dashboard。以下命令假设这些服务都跑在默认端口（Nacos 8848、Dashboard 8858）。
+
+没有 Nacos / Dashboard 也能跑：`shortlink.sentinel.*` 留空即不连它们，只是没有动态规则。
 
 1. 建库建表
 
@@ -86,6 +89,8 @@ cd frontend/admin-web && npm install && npm run dev
 | 用户端 | http://localhost:5173 | 自行注册（验证码 Mock 固定为 `123456`） |
 | 后台管理 | http://localhost:5174 | `admin` / `Admin@123456`（首次启动自动创建） |
 | 接口文档 | http://localhost:8080/doc.html | — |
+| Nacos 控制台 | http://localhost:8848/nacos | 按本机配置 |
+| Sentinel 控制台 | http://localhost:8858 | 默认 `sentinel` / `sentinel` |
 
 数据库连接配置在三个服务的 `application.yml` 里，默认 `127.0.0.1:3306`、`root/123456`、Redis 无密码，按本机实际情况修改。
 
@@ -103,6 +108,18 @@ MinIO 只有 `short-link-user-api` 用到，配置在它的 `application.yml`：
 
 **安全**：长链接在生成时校验协议白名单、拒绝 userinfo、限制端口、DNS 解析后校验实际 IP 是否为内网/保留地址，并禁止指向平台自身域名。跳转端只返回 302，不发起任何外呼，因此不存在「跟随重定向」的 SSRF 面。接口限流用 Redis 有序集合 + Lua 做滑动窗口；用户密码与短链访问密码统一 BCrypt。后台禁用用户后写入 Redis 标记，用户端拦截器每次请求检查一次，禁用立即生效。
 
+**限流分三层**，职责不重叠——同一件事只让一层管，否则出问题分不清是谁拒的：
+
+| 层 | 管什么 | 实现 |
+| --- | --- | --- |
+| `@RateLimit` | 按用户/IP 的分钟级频率（全局计数） | Redis ZSET + Lua 滑动窗口 |
+| `QuotaService` | 每日新建、累计新建、累计访问（累计量） | Redis 计数 + Lua 原子判断，阈值取 `user_quota` 快照 |
+| Sentinel | 单机 QPS、热点参数、系统水位（秒级速率） | 规则存 Nacos，改动秒级生效 |
+
+**配额体系**：`quota_package`（套餐模板，目前只有 free 在售）+ `user_quota`（用户配额快照，权威值）+ `user_quota_daily`（日计数对账）。实时计数在 Redis（`sl:q:gen:*` / `sl:q:click:*`），每天 00:10 用 `GREATEST` 覆写回 MySQL，多实例幂等。生成超限返回 `40010` / `40011`；访问超限后由跳转端的 `QuotaLimitService` 把该用户短链置 `quota_blocked=1` 并清缓存，跳转返回 403 提示页。没接支付，恢复靠后台用户列表的「重置配额」按钮（清零用量 + 解除暂停）。
+
+**熔断与降级**：Redis 缓存读包了 `SphU.entry("redis:linkcache")`，熔断期间直接返回 null 降级查库——跳转仍然可用，只是打穿到 MySQL。规则在 `short-link.sentinel.degrade.json`：1 秒内至少 20 次请求、其中过半 RT 超过 200ms 时熔断 10 秒。跳转端的流控与热点参数规则在 `short-link.sentinel.flow.json` / `param-flow.json`（资源名 `redirect:click`，热点参数为 `code`）。
+
 **令牌隔离**：用户端与后台使用不同的 JWT 密钥，令牌互不可用；后台登录另加图形验证码（服务端 AWT 绘制，无额外依赖）。
 
 **双令牌与轮换**：用户端发一对令牌——access 2 小时无状态，refresh 7 天且落 Redis 单值，所以是单会话语义（新登录会顶掉旧 refresh）。刷新时轮换：新 refresh 覆盖 Redis，旧令牌降级到 `sl:auth:refresh:prev:{userId}` 只留 60 秒，用于多标签页同时刷新时收敛到同一个令牌，避免互相踢下线。登出、改密会同时清掉新旧两个 key。前端在 401 时自动刷新并重放原请求，并发的 401 共用一次刷新。
@@ -118,16 +135,18 @@ MinIO 只有 `short-link-user-api` 用到，配置在它的 `application.yml`：
 - **统计聚合任务只在跳转端**：多个跳转实例都会跑 00:05 的聚合，靠 `ON DUPLICATE KEY UPDATE` 保证幂等，但会产生重复计算。生产上应改为单实例执行或加分布式锁。
 - **换头像不删旧对象**：每次上传都写一个新对象，旧文件留在 `short-link` 桶里，长期会累积。生产应在上传成功后删旧对象，或给桶配生命周期规则。
 - **头像只校验扩展名**：没校验文件头 Magic Number，改后缀的伪装文件能传上去。这个前缀是匿名只读的，不要往里放敏感内容。
+- **Sentinel 客户端端口会顺延**：默认 8719，同机跑多个 Sentinel 应用会依次占用 8720/8721。Sentinel 会把实际端口上报给 Dashboard，不影响使用；要固定就加 `-Dcsp.sentinel.api.port`。
+- **熔断只覆盖 Redis 缓存读**：MySQL 回源、MinIO 上传都没有单独埋点，这些依赖变慢时 Sentinel 管不到。
+- **配额恢复靠手工**：没接支付，超额后只能到后台点「重置配额」，没有自动续期或升级流程。
 
 ## 演进预案
 
-当前是单库单表 + 进程内埋点队列。下面四项不是并列关系——前两项做完，第三项基本可以不做：
+当前是单库单表 + 进程内埋点队列。下面三项不是并列关系——前两项做完，第三项基本可以不做：
 
 ```mermaid
 flowchart LR
     MQ[1. RocketMQ<br/>替换进程内队列] --> CH[2. ClickHouse<br/>存明细与聚合]
     CH --> SHARD[3. MySQL 分库分表<br/>多数场景可取消]
-    SEN[Sentinel 熔断降级<br/>独立可上] -.-> MQ
 ```
 
 | 阶段 | 要解决的问题 | 触发阈值 |
@@ -135,7 +154,8 @@ flowchart LR
 | 1. RocketMQ 替换进程内队列 | 埋点不丢、消费能力独立扩缩容 | 日点击超 5000 万，或多实例丢数不可接受 |
 | 2. ClickHouse 存明细与聚合 | `click_log` 的写入与范围聚合压垮 InnoDB | 日点击超 1000 万 |
 | 3. MySQL 分库分表 | 只剩点查表时的容量问题 | 单表超 1 亿行或写入超 2000 TPS |
-| Sentinel 熔断降级（独立项） | 系统水位保护与动态规则 | 需要动态规则而非固定阈值 |
+
+Sentinel 熔断降级已经落地（见「关键设计」），不再列入预案。
 
 ### 1. RocketMQ 替换进程内队列
 
@@ -162,14 +182,16 @@ flowchart LR
 
 **不要只为了 `click_log` 去分 MySQL**：它的读写模式（只追加、按时间范围聚合、按 code 分页）注定要迁 ClickHouse，在 InnoDB 里分库分表是给一张即将迁走的表做重复投资。
 
-### Sentinel 熔断降级
+### Sentinel 落地范围
 
-现有 `@RateLimit`（Redis ZSET + Lua 滑动窗口）只贴在验证码、注册、登录、生成短链这几个接口上，**跳转主链路 `GET /{code}` 目前没有任何限流**。落地位置按优先级：
+已接入的资源与规则：
 
-| 位置 | 用途 |
-| --- | --- |
-| redirect `GET /{code}` | 系统自适应流控；按 `code` 热点参数限流，防单条爆款打穿实例；Redis 慢调用熔断，避免 302 全卡 |
-| user-api 读接口 | 统计查询扫汇总表/明细表，慢调用比例熔断，保护 MySQL |
-| admin-api | 只开系统自适应保护 |
+| 资源 | 埋点位置 | 现有规则 |
+| --- | --- | --- |
+| `redirect:click` | `RedirectController` 手动 `SphU.entry`，热点参数为 `code` | 流控 5000 QPS、热点参数 200/秒 |
+| `redis:linkcache` | `LinkCacheService` 读 Redis 处 | 慢调用比例熔断（RT>200ms 过半即熔断 10s） |
+| `/api/link/generate`、`/api/stat/**`、`/api/user/avatar` | `SentinelWebInterceptor` | 流控 200 QPS |
 
-和 `@RateLimit` 的分工：前者是业务配额（按用户/IP 计数、阈值写死在注解里），Sentinel 补的是动态规则、熔断、热点参数和系统水位。规则推 Nacos/Apollo，配 Sentinel Dashboard。
+尚未覆盖的：`admin-api`（接口几乎都带 `{id}` 路径变量，URL 做资源会被拆散，要做得上 `@SentinelResource` 注解式命名）；MySQL 回源与 MinIO 上传也没单独埋点，熔断管不到。
+
+规则改法：直接改 Nacos 里三个 dataId 的 JSON（group `SENTINEL_GROUP`），1~2 秒生效；也可以在 Sentinel Dashboard 改，会写回 Nacos。
