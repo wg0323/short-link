@@ -1,5 +1,8 @@
 package com.shortlink.redirect.cache;
 
+import com.alibaba.csp.sentinel.Entry;
+import com.alibaba.csp.sentinel.SphU;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -26,6 +29,9 @@ import java.util.concurrent.TimeUnit;
 public class LinkCacheService {
 
     private static final Logger log = LoggerFactory.getLogger(LinkCacheService.class);
+
+    /** Redis 读的 Sentinel 资源名，熔断规则挂到它上面。 */
+    private static final String RESOURCE_REDIS_GET = "redis:linkcache";
 
     private final Cache<String, RedirectLink> localCache;
 
@@ -64,7 +70,7 @@ public class LinkCacheService {
     }
 
     private RedirectLink load(String code) {
-        String cached = redisTemplate.opsForValue().get(RedisKeys.link(code));
+        String cached = readFromRedis(code);
         if (cached != null) {
             try {
                 return objectMapper.readValue(cached, RedirectLink.class);
@@ -77,6 +83,24 @@ public class LinkCacheService {
             cacheToRedis(code, link);
         }
         return link;
+    }
+
+    /**
+     * 读 Redis，熔断期间直接返回 null 降级为查库。
+     */
+    private String readFromRedis(String code) {
+        Entry entry = null;
+        try {
+            entry = SphU.entry(RESOURCE_REDIS_GET);
+            return redisTemplate.opsForValue().get(RedisKeys.link(code));
+        } catch (BlockException e) {
+            log.warn("Redis 缓存已熔断，降级查库 code={}", code);
+            return null;
+        } finally {
+            if (entry != null) {
+                entry.exit();
+            }
+        }
     }
 
     private void cacheToRedis(String code, RedirectLink link) {
