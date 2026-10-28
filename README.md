@@ -71,7 +71,7 @@ short-link/
 ├─ frontend/user-web/      用户端前端 5173
 ├─ frontend/admin-web/     后台管理前端 5174
 ├─ sql/schema.sql          建表脚本（含分区与初始化数据）
-└─ docs/prototype/         视觉原型（静态 HTML，仅供参考）
+└─ docs/images/            README 界面预览用的截图
 ```
 
 ## 本地启动
