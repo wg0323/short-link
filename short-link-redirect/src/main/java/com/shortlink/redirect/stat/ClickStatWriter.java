@@ -4,6 +4,7 @@ import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.common.util.DigestUtils;
 import com.shortlink.redirect.event.ClickEvent;
 import com.shortlink.redirect.mapper.ClickLogMapper;
+import com.shortlink.redirect.mapper.RedirectLinkMapper;
 import com.shortlink.redirect.support.QuotaLimitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +37,15 @@ public class ClickStatWriter {
 
     private final ClickLogMapper clickLogMapper;
 
+    private final RedirectLinkMapper linkMapper;
+
     private final QuotaLimitService quotaLimitService;
 
     public ClickStatWriter(StringRedisTemplate redisTemplate, ClickLogMapper clickLogMapper,
-                           QuotaLimitService quotaLimitService) {
+                           RedirectLinkMapper linkMapper, QuotaLimitService quotaLimitService) {
         this.redisTemplate = redisTemplate;
         this.clickLogMapper = clickLogMapper;
+        this.linkMapper = linkMapper;
         this.quotaLimitService = quotaLimitService;
     }
 
@@ -52,6 +56,7 @@ public class ClickStatWriter {
         countInRedis(events);
         checkQuota(events);
         insertDetail(events);
+        updateClickCount(events);
     }
 
     /**
@@ -113,6 +118,22 @@ public class ClickStatWriter {
             clickLogMapper.insertBatch(events);
         } catch (Exception e) {
             log.warn("访问明细写库失败，条数={}", events.size(), e);
+        }
+    }
+
+    /**
+     * 回写 short_link.click_count：列表页展示的是这个冗余字段，不随明细自动变化。
+     * 同一批里同一短码只发一条 UPDATE，避免按条点击逐条更新。
+     */
+    private void updateClickCount(List<ClickEvent> events) {
+        Map<String, Long> delta = new HashMap<>();
+        for (ClickEvent event : events) {
+            delta.merge(event.getCode(), 1L, Long::sum);
+        }
+        try {
+            delta.forEach(linkMapper::increaseClickCount);
+        } catch (Exception e) {
+            log.warn("短链累计点击更新失败，条数={}", events.size(), e);
         }
     }
 

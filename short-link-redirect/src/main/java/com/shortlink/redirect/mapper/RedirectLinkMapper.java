@@ -34,4 +34,10 @@ public interface RedirectLinkMapper extends BaseMapper<RedirectLink> {
      */
     @Select("SELECT code FROM short_link WHERE user_id = #{userId} AND quota_blocked = 1 LIMIT #{limit}")
     List<String> selectBlockedCodes(@Param("userId") long userId, @Param("limit") int limit);
+
+    /**
+     * 累加短链的累计点击（列表页展示用）。
+     */
+    @Update("UPDATE short_link SET click_count = click_count + #{delta} WHERE code = #{code}")
+    int increaseClickCount(@Param("code") String code, @Param("delta") long delta);
 }
