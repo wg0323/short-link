@@ -126,7 +126,7 @@ async function submitReset() {
         <el-table-column prop="nickname" label="昵称" min-width="140">
           <template #default="{ row }">{{ row.nickname || '—' }}</template>
         </el-table-column>
-        <el-table-column label="状态" width="110">
+        <el-table-column label="状态" width="110" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small" effect="light">
               {{ row.status === 1 ? '正常' : '已禁用' }}
@@ -142,7 +142,7 @@ async function submitReset() {
         <el-table-column label="最后登录" width="180">
           <template #default="{ row }">{{ row.lastLoginAt || '—' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="280" align="right">
+        <el-table-column label="操作" width="280" align="center">
           <template #default="{ row }">
             <el-button text type="primary" @click="openReset(row)">重置密码</el-button>
             <el-button text @click="resetQuota(row)">重置配额</el-button>
