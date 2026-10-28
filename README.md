@@ -111,7 +111,7 @@ MinIO 只有 `short-link-user-api` 用到，配置在它的 `application.yml`：
 
 ## 已知限制
 
-- **地域分布显示「未知」**：`ip2region.xdb` 数据文件未随仓库分发（约 11MB）。把它放到 `short-link-redirect/src/main/resources/` 或通过 `shortlink.redirect.ip2region-path` 指定路径后重启即可生效，代码侧已做缺文件降级。补了文件仍看不到省市，多半是从内网地址（`127.0.0.1` / `192.168.x.x`）访问跳转端——内网 IP 没有归属地，会显示成「内网IP」。
+- **地域分布可能显示「未知」/「内网IP」**：`ip2region.xdb`（约 11MB）已随仓库放在 `short-link-redirect/src/main/resources/`。若控制台仍是「未知」，多半是跑着旧构建产物（文件加入前打的 jar），重新 `mvn package` 或重启跳转端即可；若从内网地址（`127.0.0.1` / `192.168.x.x`）访问，内网 IP 本来就没有省市归属，会显示成「内网IP」。
 - **后台不物理删除用户**：只提供禁用，避免留下孤儿短链与统计数据。`admin-api` 未实现 `DELETE /admin/user/{id}`。
 - **前端包体积偏大**：Element Plus 与 ECharts 均为全量引入，主 chunk 约 1.1MB（gzip 373KB）。要压缩需要改按需引入。
 - **`click_log` 分区不会自动滚动**：建表脚本预建了 2026-08 到 2026-12 的分区与 `pmax`，长期运行需要定时 `ALTER TABLE ... ADD PARTITION` 或定期清理。
