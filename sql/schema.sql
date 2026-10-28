@@ -85,9 +85,9 @@ CREATE TABLE `user_quota`
 DROP TABLE IF EXISTS `user_quota_daily`;
 CREATE TABLE `user_quota_daily`
 (
-    `user_id`   BIGINT UNSIGNED NOT NULL,
-    `stat_date` DATE            NOT NULL,
-    `generated` BIGINT          NOT NULL DEFAULT 0,
+    `user_id`        BIGINT UNSIGNED NOT NULL,
+    `stat_date`      DATE            NOT NULL,
+    `generate_count` BIGINT          NOT NULL DEFAULT 0 COMMENT '当日新建条数',
     PRIMARY KEY (`user_id`, `stat_date`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='每日新建计数';
