@@ -8,6 +8,7 @@ import com.shortlink.common.util.Base62;
 import com.shortlink.common.util.IpUtils;
 import com.shortlink.redirect.bloom.BloomFilterService;
 import com.shortlink.redirect.cache.LinkCacheService;
+import com.shortlink.redirect.cache.LinkSourceUnavailableException;
 import com.shortlink.redirect.entity.RedirectLink;
 import com.shortlink.redirect.event.ClickEvent;
 import com.shortlink.redirect.event.ClickEventPublisher;
@@ -72,6 +73,9 @@ public class RedirectController {
             }
             publishClick(link, request);
             return redirectTo(link.getOriginUrl(), response);
+        } catch (LinkSourceUnavailableException e) {
+            log.warn("缓存与回源均不可用 code={}", code);
+            return errorView(503, "服务暂时不可用", "缓存与数据库都在恢复中，请稍后重试");
         } catch (BlockException e) {
             log.warn("跳转被 Sentinel 拦截 code={} rule={}", code, e.getRule() == null ? "-" : e.getRule().getResource());
             return errorView(429, "访问太频繁", "请稍后再试");
@@ -107,6 +111,9 @@ public class RedirectController {
             }
             publishClick(link, request);
             return redirectTo(link.getOriginUrl(), response);
+        } catch (LinkSourceUnavailableException e) {
+            log.warn("缓存与回源均不可用 code={}", code);
+            return errorView(503, "服务暂时不可用", "缓存与数据库都在恢复中，请稍后重试");
         } catch (Exception e) {
             log.error("密码校验异常 code={}", code, e);
             return errorView(500, "服务暂时不可用", "请稍后重试");

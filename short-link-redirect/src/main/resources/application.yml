@@ -41,9 +41,11 @@ management:
 
 shortlink:
   redirect:
-    # L1 本地缓存条目数与存活时间
+    # L1 本地缓存：条目数、异步刷新间隔、兜底过期时间
+    # refresh 到点后读线程拿旧值、后台异步回源；expire 只做兜底，让旧值扛住 Redis 长时间不可用
     local-cache-size: 10000
-    local-cache-seconds: 60
+    local-cache-refresh-seconds: 60
+    local-cache-expire-seconds: 600
     # L2 Redis 缓存时间（秒），实际写入时会叠加 0-300 秒随机抖动
     redis-cache-seconds: 1800
     # 访问密码校验通过后的通行证有效期（秒）

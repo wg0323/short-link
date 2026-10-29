@@ -125,7 +125,7 @@ MinIO 只有 `short-link-user-api` 用到，配置在它的 `application.yml`：
 
 **幂等**：`uk_user_domain_hash(user_id, domain_id, url_hash)` 唯一索引兜底。同一用户在同一域名下重复提交同一条长链接，第二次直接返回已有短链并标记 `duplicated: true`。删除时把 `url_hash` 置空，释放这个占位。
 
-**跳转链路**：布隆过滤器挡不存在的短码 → Caffeine 本地缓存 → Redis → MySQL 回源，命中后返回 `302` 并带 `Cache-Control: no-store`（否则浏览器缓存会让统计丢数）。短链被修改或删除时，用户端删 Redis 并向 `sl:link:evict` 频道广播，各跳转实例清掉本地缓存；新建短链则通过 `sl:link:add` 让跳转端把短码加进布隆过滤器。
+**跳转链路**：布隆过滤器挡不存在的短码 → Caffeine 本地缓存 → Redis → MySQL 回源，命中后返回 `302` 并带 `Cache-Control: no-store`（否则浏览器缓存会让统计丢数）。短链被修改或删除时，用户端删 Redis 并向 `sl:link:evict` 频道广播，各跳转实例清掉本地缓存；新建短链则通过 `sl:link:add` 让跳转端把短码加进布隆过滤器。L1 用 `refreshAfterWrite=60s` + `expireAfterWrite=600s`：到点后读线程先拿旧值、后台异步回源，后者只是兜底——Redis 长时间不可用时本地旧值还能继续服务，不会集中回源打库。代价是漏收广播的实例最长会脏 10 分钟（原来 60 秒）。
 
 **埋点与统计**：跳转主链路只把点击事件丢进有界队列（2 万条，满了丢弃并计数），消费线程批量写 Redis 计数（PV 用 INCR、UV/独立 IP 用 HyperLogLog、地域用 Hash）和 `click_log` 明细。每天 00:05 把前一天数据刷进 `link_stat_daily` / `link_stat_region_daily`，查询时「今天走 Redis、历史走汇总表」。
 
@@ -141,7 +141,7 @@ MinIO 只有 `short-link-user-api` 用到，配置在它的 `application.yml`：
 
 **配额体系**：`quota_package`（套餐模板，目前只有 free 在售）+ `user_quota`（用户配额快照，权威值）+ `user_quota_daily`（日计数对账）。实时计数在 Redis（`sl:q:gen:*` / `sl:q:click:*`），每天 00:10 用 `GREATEST` 覆写回 MySQL，多实例幂等。生成超限返回 `40010` / `40011`；访问超限后由跳转端的 `QuotaLimitService` 把该用户短链置 `quota_blocked=1` 并清缓存，跳转返回 403 提示页。没接支付，恢复靠后台用户列表的「重置配额」按钮（清零用量 + 解除暂停）。
 
-**熔断与降级**：Redis 缓存读包了 `SphU.entry("redis:linkcache")`，熔断期间直接返回 null 降级查库——跳转仍然可用，只是打穿到 MySQL。规则在 `short-link.sentinel.degrade.json`：1 秒内至少 20 次请求、其中过半 RT 超过 200ms 时熔断 10 秒。跳转端的流控与热点参数规则在 `short-link.sentinel.flow.json` / `param-flow.json`（资源名 `redirect:click`，热点参数为 `code`）。
+**熔断与降级**：两级都埋了资源。Redis 读包 `SphU.entry("redis:linkcache")`，熔断或连接异常时本次回源直接查库、且不再回写 Redis；MySQL 回源包 `SphU.entry("mysql:link")`，熔断打开后不再压库——L1 有旧值就继续返回旧值，冷 key 由控制层渲染 503 提示页。Redis 那条规则在 `short-link.sentinel.degrade.json`：1 秒内至少 20 次请求、其中过半 RT 超过 200ms 时熔断 10 秒；跳转端的流控与热点参数规则在 `short-link.sentinel.flow.json` / `param-flow.json`（资源名 `redirect:click`，热点参数为 `code`）。
 
 **令牌隔离**：用户端与后台使用不同的 JWT 密钥，令牌互不可用；后台登录另加图形验证码（服务端 AWT 绘制，无额外依赖）。
 
@@ -152,6 +152,7 @@ MinIO 只有 `short-link-user-api` 用到，配置在它的 `application.yml`：
 ## 已知限制
 
 - **地域分布可能显示「未知」/「内网IP」**：`ip2region.xdb`（约 11MB）已随仓库放在 `short-link-redirect/src/main/resources/`。若控制台仍是「未知」，多半是跑着旧构建产物（文件加入前打的 jar），重新 `mvn package` 或重启跳转端即可；若从内网地址（`127.0.0.1` / `192.168.x.x`）访问，内网 IP 本来就没有省市归属，会显示成「内网IP」。
+- **Redis 不可用时跳转端起不来**：`RedisMessageListenerContainer`（订阅 `sl:link:*` 广播）启动时连不上 Redis 会让整个 ApplicationContext 启动失败。所以「Redis 挂了降级查库」只对运行期故障有效，启动期 Redis 必须可用；要消除这条限制需要给监听容器加容错（启动失败只告警、后台重试）。
 - **后台不物理删除用户**：只提供禁用，避免留下孤儿短链与统计数据。`admin-api` 未实现 `DELETE /admin/user/{id}`。
 - **前端包体积偏大**：Element Plus 与 ECharts 均为全量引入，主 chunk 约 1.1MB（gzip 373KB）。要压缩需要改按需引入。
 - **`click_log` 分区不会自动滚动**：建表脚本预建了 2026-08 到 2026-12 的分区与 `pmax`，长期运行需要定时 `ALTER TABLE ... ADD PARTITION` 或定期清理。
@@ -213,8 +214,11 @@ Sentinel 熔断降级已经落地（见「关键设计」），不再列入预�
 | --- | --- | --- |
 | `redirect:click` | `RedirectController` 手动 `SphU.entry`，热点参数为 `code` | 流控 5000 QPS、热点参数 200/秒 |
 | `redis:linkcache` | `LinkCacheService` 读 Redis 处 | 慢调用比例熔断（RT>200ms 过半即熔断 10s） |
-| `/api/link/generate`、`/api/stat/**`、`/api/user/avatar` | `SentinelWebInterceptor` | 流控 200 QPS |
+| `mysql:link` | `LinkCacheService` 回源 MySQL 处 | 慢调用比例熔断（RT>500ms 过半即熔断 10s） |
+| `/api/link/generate` | `SentinelWebInterceptor` | 流控 200 QPS |
 
-尚未覆盖的：`admin-api`（接口几乎都带 `{id}` 路径变量，URL 做资源会被拆散，要做得上 `@SentinelResource` 注解式命名）；MySQL 回源与 MinIO 上传也没单独埋点，熔断管不到。
+`/api/stat/*`、`/api/user/avatar` 也挂了拦截器，但 Nacos 里没有对应规则：资源名是精确 URI，`/api/stat/**` 这种通配符匹配不到，要按具体路径逐条加。
+
+尚未覆盖的：`admin-api`（接口几乎都带 `{id}` 路径变量，URL 做资源会被拆散，要做得上 `@SentinelResource` 注解式命名）；MySQL 回源已埋 `mysql:link`，MinIO 上传仍未埋点，熔断管不到。
 
 规则改法：直接改 Nacos 里三个 dataId 的 JSON（group `SENTINEL_GROUP`），1~2 秒生效；也可以在 Sentinel Dashboard 改，会写回 Nacos。
