@@ -9,8 +9,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.redirect.entity.RedirectLink;
 import com.shortlink.redirect.mapper.RedirectLinkMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -26,9 +25,8 @@ import java.util.concurrent.TimeUnit;
  * Redis TTL 叠加随机抖动，避免大批 key 同时过期造成雪崩。</p>
  */
 @Service
+@Slf4j
 public class LinkCacheService {
-
-    private static final Logger log = LoggerFactory.getLogger(LinkCacheService.class);
 
     /** Redis 读的 Sentinel 资源名，熔断规则挂到它上面。 */
     private static final String RESOURCE_REDIS_GET = "redis:linkcache";

@@ -11,8 +11,7 @@ import com.shortlink.user.dto.RegisterRequest;
 import com.shortlink.user.dto.SendSmsResult;
 import com.shortlink.user.entity.User;
 import com.shortlink.user.mapper.UserMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -36,9 +35,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * </ul></p>
  */
 @Service
+@Slf4j
 public class AuthService {
-
-    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private static final int SMS_DAILY_LIMIT = 10;
 

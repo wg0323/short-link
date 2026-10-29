@@ -1,8 +1,7 @@
 package com.shortlink.redirect.support;
 
+import lombok.extern.slf4j.Slf4j;
 import org.lionsoul.ip2region.xdb.Searcher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -17,9 +16,8 @@ import org.springframework.util.StreamUtils;
  * 不影响跳转主链路。</p>
  */
 @Service
+@Slf4j
 public class IpRegionService {
-
-    private static final Logger log = LoggerFactory.getLogger(IpRegionService.class);
 
     private final Searcher searcher;
 

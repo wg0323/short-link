@@ -8,6 +8,7 @@ import com.shortlink.admin.entity.Domain;
 import com.shortlink.admin.mapper.DomainMapper;
 import com.shortlink.common.api.ResultCode;
 import com.shortlink.common.exception.BizException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,13 +20,10 @@ import java.util.stream.Collectors;
  * 短链域名维护。域名只影响新生成的短链展示，不回溯已有短链。
  */
 @Service
+@RequiredArgsConstructor
 public class AdminDomainService {
 
     private final DomainMapper domainMapper;
-
-    public AdminDomainService(DomainMapper domainMapper) {
-        this.domainMapper = domainMapper;
-    }
 
     public List<DomainVO> list() {
         return domainMapper.selectList(new LambdaQueryWrapper<Domain>()

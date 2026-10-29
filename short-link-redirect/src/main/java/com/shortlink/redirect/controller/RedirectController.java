@@ -13,8 +13,8 @@ import com.shortlink.redirect.event.ClickEvent;
 import com.shortlink.redirect.event.ClickEventPublisher;
 import com.shortlink.redirect.support.IpRegionService;
 import com.shortlink.redirect.support.UserAgentParser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
@@ -39,9 +39,9 @@ import java.util.Map;
  * 「服务端跟随重定向」这类 SSRF 面。</p>
  */
 @Controller
+@Slf4j
+@RequiredArgsConstructor
 public class RedirectController {
-
-    private static final Logger log = LoggerFactory.getLogger(RedirectController.class);
 
     /** Sentinel 资源名，流控与热点参数规则都挂到它上面。 */
     private static final String RESOURCE_REDIRECT = "redirect:click";
@@ -51,16 +51,6 @@ public class RedirectController {
     private final ClickEventPublisher clickEventPublisher;
     private final IpRegionService ipRegionService;
     private final PasswordEncoder passwordEncoder;
-
-    public RedirectController(BloomFilterService bloomFilterService, LinkCacheService linkCacheService,
-                              ClickEventPublisher clickEventPublisher, IpRegionService ipRegionService,
-                              PasswordEncoder passwordEncoder) {
-        this.bloomFilterService = bloomFilterService;
-        this.linkCacheService = linkCacheService;
-        this.clickEventPublisher = clickEventPublisher;
-        this.ipRegionService = ipRegionService;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     @GetMapping("/{code}")
     public ModelAndView redirect(@PathVariable String code, HttpServletRequest request,

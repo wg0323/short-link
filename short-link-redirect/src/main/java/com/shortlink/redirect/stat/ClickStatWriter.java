@@ -6,8 +6,8 @@ import com.shortlink.redirect.event.ClickEvent;
 import com.shortlink.redirect.mapper.ClickLogMapper;
 import com.shortlink.redirect.mapper.RedirectLinkMapper;
 import com.shortlink.redirect.support.QuotaLimitService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -29,9 +29,9 @@ import java.util.stream.Collectors;
  * 明细写库失败不影响计数，下一批继续。</p>
  */
 @Component
+@Slf4j
+@RequiredArgsConstructor
 public class ClickStatWriter {
-
-    private static final Logger log = LoggerFactory.getLogger(ClickStatWriter.class);
 
     private final StringRedisTemplate redisTemplate;
 
@@ -40,14 +40,6 @@ public class ClickStatWriter {
     private final RedirectLinkMapper linkMapper;
 
     private final QuotaLimitService quotaLimitService;
-
-    public ClickStatWriter(StringRedisTemplate redisTemplate, ClickLogMapper clickLogMapper,
-                           RedirectLinkMapper linkMapper, QuotaLimitService quotaLimitService) {
-        this.redisTemplate = redisTemplate;
-        this.clickLogMapper = clickLogMapper;
-        this.linkMapper = linkMapper;
-        this.quotaLimitService = quotaLimitService;
-    }
 
     public void write(List<ClickEvent> events) {
         if (events.isEmpty()) {

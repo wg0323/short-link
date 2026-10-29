@@ -4,6 +4,7 @@ import com.shortlink.admin.dto.CaptchaVO;
 import com.shortlink.common.api.ResultCode;
 import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.common.exception.BizException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -26,6 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * <p>验证码存 Redis、5 分钟过期、校验后立即删除，防止重复使用。</p>
  */
 @Service
+@RequiredArgsConstructor
 public class CaptchaService {
 
     private static final char[] CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
@@ -37,10 +39,6 @@ public class CaptchaService {
     private static final int CODE_LENGTH = 4;
 
     private final StringRedisTemplate redisTemplate;
-
-    public CaptchaService(StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
 
     public CaptchaVO generate() {
         String code = randomCode();

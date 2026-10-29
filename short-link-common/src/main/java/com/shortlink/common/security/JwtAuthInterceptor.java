@@ -3,6 +3,7 @@ package com.shortlink.common.security;
 import com.shortlink.common.api.ResultCode;
 import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.common.exception.BizException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ import javax.servlet.http.HttpServletResponse;
  * 跳转服务不依赖 JWT，因此不会被创建。</p>
  */
 @Component
+@RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "shortlink.jwt", name = "secret")
 public class JwtAuthInterceptor implements HandlerInterceptor {
 
@@ -28,11 +30,6 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
     private final JwtService jwtService;
 
     private final StringRedisTemplate redisTemplate;
-
-    public JwtAuthInterceptor(JwtService jwtService, StringRedisTemplate redisTemplate) {
-        this.jwtService = jwtService;
-        this.redisTemplate = redisTemplate;
-    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

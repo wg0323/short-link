@@ -3,8 +3,8 @@ package com.shortlink.user.job;
 import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.user.entity.UserQuota;
 import com.shortlink.user.mapper.UserQuotaMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,18 +21,13 @@ import java.util.List;
  * <p>多实例同时跑不会算错：覆盖用 GREATEST，日计数用 upsert，都是幂等的。</p>
  */
 @Component
+@Slf4j
+@RequiredArgsConstructor
 public class QuotaReconcileJob {
-
-    private static final Logger log = LoggerFactory.getLogger(QuotaReconcileJob.class);
 
     private final UserQuotaMapper userQuotaMapper;
 
     private final StringRedisTemplate redisTemplate;
-
-    public QuotaReconcileJob(UserQuotaMapper userQuotaMapper, StringRedisTemplate redisTemplate) {
-        this.userQuotaMapper = userQuotaMapper;
-        this.redisTemplate = redisTemplate;
-    }
 
     @Scheduled(cron = "${shortlink.quota.reconcile-cron:0 10 0 * * ?}")
     public void reconcileYesterday() {

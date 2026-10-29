@@ -1,27 +1,36 @@
 package com.shortlink.admin.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 
 /**
  * 后台用户列表行：注册用户 + 累计短链数。
  */
+@Schema(description = "后台用户列表行")
 public class AdminUserVO {
 
+    @Schema(description = "用户 ID", example = "1")
     private Long id;
 
+    @Schema(description = "手机号", example = "13800000000")
     private String phone;
 
+    @Schema(description = "昵称", example = "小明")
     private String nickname;
 
+    @Schema(description = "1 正常，0 禁用", example = "1")
     private Integer status;
 
+    @Schema(description = "该用户已生成的短链数", example = "12")
     private Long linkCount;
 
+    @Schema(description = "最近登录时间", example = "2026-01-01 12:00:00")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastLoginAt;
 
+    @Schema(description = "注册时间", example = "2026-01-01 12:00:00")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 

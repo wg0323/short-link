@@ -10,8 +10,8 @@ import com.shortlink.common.api.ResultCode;
 import com.shortlink.common.cache.LinkCachePublisher;
 import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.common.exception.BizException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,9 +29,9 @@ import java.util.List;
  * 一期不物理删除用户，避免留下孤儿短链与统计数据。</p>
  */
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class AdminUserService {
-
-    private static final Logger log = LoggerFactory.getLogger(AdminUserService.class);
 
     private final AdminUserMapper adminUserMapper;
 
@@ -44,17 +44,6 @@ public class AdminUserService {
     private final PasswordEncoder passwordEncoder;
 
     private final StringRedisTemplate redisTemplate;
-
-    public AdminUserService(AdminUserMapper adminUserMapper, PlatformUserMapper platformUserMapper,
-                            QuotaAdminMapper quotaAdminMapper, LinkCachePublisher linkCachePublisher,
-                            PasswordEncoder passwordEncoder, StringRedisTemplate redisTemplate) {
-        this.adminUserMapper = adminUserMapper;
-        this.platformUserMapper = platformUserMapper;
-        this.quotaAdminMapper = quotaAdminMapper;
-        this.linkCachePublisher = linkCachePublisher;
-        this.passwordEncoder = passwordEncoder;
-        this.redisTemplate = redisTemplate;
-    }
 
     public PageVO<AdminUserVO> page(String keyword, Integer status, int page, int size) {
         int currentPage = Math.max(page, 1);

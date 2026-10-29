@@ -1,7 +1,6 @@
 package com.shortlink.redirect.event;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
@@ -17,9 +16,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * 宁可少量统计数据丢失，也不能把 302 拖慢或阻塞。</p>
  */
 @Component
+@Slf4j
 public class LocalQueueClickPublisher implements ClickEventPublisher {
-
-    private static final Logger log = LoggerFactory.getLogger(LocalQueueClickPublisher.class);
 
     private static final int CAPACITY = 20000;
 

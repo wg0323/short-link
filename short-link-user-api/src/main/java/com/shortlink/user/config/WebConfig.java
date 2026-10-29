@@ -2,6 +2,7 @@ package com.shortlink.user.config;
 
 import com.alibaba.csp.sentinel.adapter.spring.webmvc.SentinelWebInterceptor;
 import com.shortlink.common.security.JwtAuthInterceptor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -13,6 +14,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * <p>白名单之外的 {@code /api/**} 全部要求携带 JWT；认证相关的匿名接口在这里放行。</p>
  */
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
 
     private static final String[] WHITE_LIST = {
@@ -35,10 +37,6 @@ public class WebConfig implements WebMvcConfigurer {
             "/api/stat/**",
             "/api/user/avatar"
     };
-
-    public WebConfig(JwtAuthInterceptor jwtAuthInterceptor) {
-        this.jwtAuthInterceptor = jwtAuthInterceptor;
-    }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

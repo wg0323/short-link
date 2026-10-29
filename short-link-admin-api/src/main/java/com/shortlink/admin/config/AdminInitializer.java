@@ -2,8 +2,7 @@ package com.shortlink.admin.config;
 
 import com.shortlink.admin.entity.AdminUser;
 import com.shortlink.admin.mapper.AdminUserMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -18,9 +17,8 @@ import java.time.LocalDateTime;
  * <p>密码通过 BCrypt 现算，所以不需要在 SQL 里放明文或预生成摘要。</p>
  */
 @Component
+@Slf4j
 public class AdminInitializer implements ApplicationRunner {
-
-    private static final Logger log = LoggerFactory.getLogger(AdminInitializer.class);
 
     private final AdminUserMapper adminUserMapper;
 

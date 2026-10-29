@@ -8,6 +8,7 @@ import com.shortlink.admin.mapper.AdminUserMapper;
 import com.shortlink.common.api.ResultCode;
 import com.shortlink.common.exception.BizException;
 import com.shortlink.common.security.JwtService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
  * <p>后台令牌与用户端令牌使用不同 secret，互相不可用。</p>
  */
 @Service
+@RequiredArgsConstructor
 public class AdminAuthService {
 
     private final AdminUserMapper adminUserMapper;
@@ -28,14 +30,6 @@ public class AdminAuthService {
     private final JwtService jwtService;
 
     private final CaptchaService captchaService;
-
-    public AdminAuthService(AdminUserMapper adminUserMapper, PasswordEncoder passwordEncoder,
-                            JwtService jwtService, CaptchaService captchaService) {
-        this.adminUserMapper = adminUserMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-        this.captchaService = captchaService;
-    }
 
     public AdminAuthResult login(AdminLoginRequest request) {
         captchaService.verify(request.getCaptchaId(), request.getCaptchaCode());

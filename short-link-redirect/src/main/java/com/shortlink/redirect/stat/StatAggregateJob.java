@@ -2,8 +2,8 @@ package com.shortlink.redirect.stat;
 
 import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.redirect.mapper.StatAggregateMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -20,18 +20,13 @@ import java.util.Set;
  * 这样既保证今天的数据随时可见，又不让历史查询扫明细表。</p>
  */
 @Component
+@Slf4j
+@RequiredArgsConstructor
 public class StatAggregateJob {
-
-    private static final Logger log = LoggerFactory.getLogger(StatAggregateJob.class);
 
     private final StringRedisTemplate redisTemplate;
 
     private final StatAggregateMapper aggregateMapper;
-
-    public StatAggregateJob(StringRedisTemplate redisTemplate, StatAggregateMapper aggregateMapper) {
-        this.redisTemplate = redisTemplate;
-        this.aggregateMapper = aggregateMapper;
-    }
 
     @Scheduled(cron = "0 5 0 * * ?")
     public void aggregateYesterday() {

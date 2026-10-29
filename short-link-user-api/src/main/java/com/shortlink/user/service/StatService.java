@@ -11,6 +11,7 @@ import com.shortlink.user.dto.StatTrendPoint;
 import com.shortlink.user.entity.ShortLink;
 import com.shortlink.user.mapper.ShortLinkMapper;
 import com.shortlink.user.mapper.StatQueryMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
  * 跨越今天的时间区间会把两段结果拼起来，用户看到的永远是完整数据。</p>
  */
 @Service
+@RequiredArgsConstructor
 public class StatService {
 
     private final StatQueryMapper statQueryMapper;
@@ -37,13 +39,6 @@ public class StatService {
     private final ShortLinkMapper shortLinkMapper;
 
     private final StringRedisTemplate redisTemplate;
-
-    public StatService(StatQueryMapper statQueryMapper, ShortLinkMapper shortLinkMapper,
-                       StringRedisTemplate redisTemplate) {
-        this.statQueryMapper = statQueryMapper;
-        this.shortLinkMapper = shortLinkMapper;
-        this.redisTemplate = redisTemplate;
-    }
 
     public StatOverview overview(long userId, String code, String range, LocalDate start, LocalDate end) {
         LocalDate[] window = resolveRange(range, start, end);

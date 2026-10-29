@@ -1,18 +1,24 @@
 package com.shortlink.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 
+@Schema(description = "登录 / 注册 / 刷新返回的凭证")
 public class AuthResponse {
 
+    @Schema(description = "访问令牌，放在 Authorization: Bearer 后面")
     private String accessToken;
 
+    @Schema(description = "刷新令牌，用于换取新的访问令牌")
     private String refreshToken;
 
     /** access token 有效期，单位秒。 */
+    @Schema(description = "访问令牌有效期，单位秒", example = "7200")
     private long expiresIn;
 
+    @Schema(description = "当前登录用户信息")
     private Profile user;
 
     public AuthResponse() {
@@ -57,16 +63,22 @@ public class AuthResponse {
         this.user = user;
     }
 
+    @Schema(description = "登录用户基本信息")
     public static class Profile {
 
+        @Schema(description = "用户 ID", example = "1")
         private Long id;
 
+        @Schema(description = "手机号", example = "13800000000")
         private String phone;
 
+        @Schema(description = "昵称", example = "小明")
         private String nickname;
 
+        @Schema(description = "头像访问地址，未上传时为空串")
         private String avatar;
 
+        @Schema(description = "注册日期", example = "2026-01-01")
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDateTime createdAt;
 

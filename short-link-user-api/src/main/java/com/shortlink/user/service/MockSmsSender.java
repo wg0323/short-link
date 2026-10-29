@@ -1,7 +1,6 @@
 package com.shortlink.user.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -11,10 +10,9 @@ import org.springframework.stereotype.Component;
  * <p>真实接入时新增一个 {@link SmsSender} 实现并把 {@code shortlink.sms.mock} 置为 false。</p>
  */
 @Component
+@Slf4j
 @ConditionalOnProperty(prefix = "shortlink.sms", name = "mock", havingValue = "true", matchIfMissing = true)
 public class MockSmsSender implements SmsSender {
-
-    private static final Logger log = LoggerFactory.getLogger(MockSmsSender.class);
 
     @Override
     public void send(String phone, String code) {

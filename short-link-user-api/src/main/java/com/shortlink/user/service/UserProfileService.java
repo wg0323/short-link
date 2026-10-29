@@ -6,6 +6,7 @@ import com.shortlink.common.exception.BizException;
 import com.shortlink.user.dto.UserProfileVO;
 import com.shortlink.user.entity.User;
 import com.shortlink.user.mapper.UserMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.Locale;
  * 个人信息：查询、改昵称、改头像、改密码。
  */
 @Service
+@RequiredArgsConstructor
 public class UserProfileService {
 
     private static final long MAX_AVATAR_SIZE = 2L * 1024 * 1024;
@@ -29,14 +31,6 @@ public class UserProfileService {
     private final PasswordEncoder passwordEncoder;
     private final StringRedisTemplate redisTemplate;
     private final AvatarStorage avatarStorage;
-
-    public UserProfileService(UserMapper userMapper, PasswordEncoder passwordEncoder,
-                              StringRedisTemplate redisTemplate, AvatarStorage avatarStorage) {
-        this.userMapper = userMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.redisTemplate = redisTemplate;
-        this.avatarStorage = avatarStorage;
-    }
 
     public UserProfileVO profile(long userId) {
         User user = userMapper.selectById(userId);

@@ -13,6 +13,7 @@ import com.shortlink.user.dto.SendSmsResult;
 import com.shortlink.user.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,42 +24,39 @@ import javax.validation.Valid;
 @Tag(name = "认证", description = "手机号注册、登录与令牌刷新")
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
 
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
-
-    @Operation(summary = "发送验证码（Mock 通道会直接回传验证码）")
+    @Operation(summary = "发送验证码", description = "Mock 通道会直接回传验证码；同一手机号 60 秒内只能发一次，每天上限 10 次")
     @PostMapping("/sms/send")
     @RateLimit(type = RateLimitType.IP, limit = 5, windowSeconds = 600, name = "sms_send")
     public Result<SendSmsResult> sendSms(@Valid @RequestBody SendSmsRequest request) {
         return Result.ok(authService.sendSms(request.getPhone()));
     }
 
-    @Operation(summary = "注册并直接登录")
+    @Operation(summary = "注册并直接登录", description = "校验短信验证码后创建用户，返回访问令牌与刷新令牌")
     @PostMapping("/register")
     @RateLimit(type = RateLimitType.IP, limit = 10, windowSeconds = 3600, name = "register")
     public Result<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return Result.ok(authService.register(request));
     }
 
-    @Operation(summary = "手机号密码登录")
+    @Operation(summary = "手机号密码登录", description = "连续 5 次密码错误会锁定该账号 15 分钟")
     @PostMapping("/login")
     @RateLimit(type = RateLimitType.IP, limit = 20, windowSeconds = 600, name = "login")
     public Result<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return Result.ok(authService.login(request));
     }
 
-    @Operation(summary = "用刷新令牌换取新的访问令牌")
+    @Operation(summary = "刷新访问令牌", description = "用刷新令牌换取新的访问令牌；旧刷新令牌保留 60 秒宽限期")
     @PostMapping("/refresh")
     public Result<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
         return Result.ok(authService.refresh(request.getRefreshToken()));
     }
 
-    @Operation(summary = "退出登录")
+    @Operation(summary = "退出登录", description = "服务端删除该用户的刷新令牌，访问令牌到期后自然失效")
     @PostMapping("/logout")
     public Result<Void> logout() {
         authService.logout(UserContext.require());

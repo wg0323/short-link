@@ -5,6 +5,7 @@ import com.shortlink.common.constant.RedisKeys;
 import com.shortlink.common.exception.BizException;
 import com.shortlink.common.security.UserContext;
 import com.shortlink.common.util.IpUtils;
+import lombok.RequiredArgsConstructor;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -25,6 +26,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 @Aspect
 @Component
+@RequiredArgsConstructor
 public class RateLimitAspect {
 
     private static final String LUA =
@@ -43,12 +45,7 @@ public class RateLimitAspect {
 
     private final StringRedisTemplate redisTemplate;
 
-    private final DefaultRedisScript<Long> script;
-
-    public RateLimitAspect(StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
-        this.script = new DefaultRedisScript<>(LUA, Long.class);
-    }
+    private final DefaultRedisScript<Long> script = new DefaultRedisScript<>(LUA, Long.class);
 
     @Around("@annotation(rateLimit)")
     public Object around(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {

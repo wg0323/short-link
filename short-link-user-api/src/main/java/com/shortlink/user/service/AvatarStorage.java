@@ -8,8 +8,7 @@ import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.SetBucketPolicyArgs;
 import io.minio.errors.ErrorResponseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,9 +23,8 @@ import java.util.UUID;
  * 因此这个地址不含签名、不会过期。改用 CDN 或换 endpoint 时只需改配置，不用洗数据。</p>
  */
 @Service
+@Slf4j
 public class AvatarStorage {
-
-    private static final Logger log = LoggerFactory.getLogger(AvatarStorage.class);
 
     private final MinioClient minioClient;
     private final String endpoint;

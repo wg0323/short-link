@@ -18,6 +18,7 @@ import com.shortlink.user.dto.UpdateLinkRequest;
 import com.shortlink.user.entity.Domain;
 import com.shortlink.user.entity.ShortLink;
 import com.shortlink.user.mapper.ShortLinkMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
  * 第二次会命中 {@code uk_user_domain_hash}，此时直接把已有短链返回并标记 duplicated。</p>
  */
 @Service
+@RequiredArgsConstructor
 public class ShortLinkService {
 
     private final ShortLinkMapper shortLinkMapper;
@@ -46,19 +48,6 @@ public class ShortLinkService {
     private final PasswordEncoder passwordEncoder;
     private final LinkCachePublisher linkCachePublisher;
     private final QuotaService quotaService;
-
-    public ShortLinkService(ShortLinkMapper shortLinkMapper, DomainService domainService,
-                            CodeGenerator codeGenerator, UrlSecurityValidator urlSecurityValidator,
-                            PasswordEncoder passwordEncoder, LinkCachePublisher linkCachePublisher,
-                            QuotaService quotaService) {
-        this.shortLinkMapper = shortLinkMapper;
-        this.domainService = domainService;
-        this.codeGenerator = codeGenerator;
-        this.urlSecurityValidator = urlSecurityValidator;
-        this.passwordEncoder = passwordEncoder;
-        this.linkCachePublisher = linkCachePublisher;
-        this.quotaService = quotaService;
-    }
 
     @Transactional(rollbackFor = Exception.class)
     public CreateLinkResult generate(long userId, CreateLinkRequest request) {

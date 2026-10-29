@@ -1,6 +1,7 @@
 package com.shortlink.common.cache;
 
 import com.shortlink.common.constant.RedisKeys;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -11,13 +12,10 @@ import org.springframework.stereotype.Component;
  * 不广播的话最长要等本地 TTL 到期才会生效。</p>
  */
 @Component
+@RequiredArgsConstructor
 public class LinkCachePublisher {
 
     private final StringRedisTemplate redisTemplate;
-
-    public LinkCachePublisher(StringRedisTemplate redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
 
     public void evict(String code) {
         redisTemplate.delete(RedisKeys.link(code));

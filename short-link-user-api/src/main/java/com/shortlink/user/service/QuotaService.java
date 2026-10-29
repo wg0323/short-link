@@ -6,8 +6,8 @@ import com.shortlink.common.exception.BizException;
 import com.shortlink.user.dto.QuotaVO;
 import com.shortlink.user.entity.UserQuota;
 import com.shortlink.user.mapper.UserQuotaMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -25,9 +25,9 @@ import java.util.List;
  * 免费额度先取固定值，接入支付后改为读 {@code quota_package} + 下单快照。</p>
  */
 @Service
+@Slf4j
+@RequiredArgsConstructor
 public class QuotaService {
-
-    private static final Logger log = LoggerFactory.getLogger(QuotaService.class);
 
     private static final String FREE_PACKAGE = "free";
 
@@ -65,16 +65,11 @@ public class QuotaService {
 
     private final StringRedisTemplate redisTemplate;
 
-    private final DefaultRedisScript<Long> consumeScript;
+    private final DefaultRedisScript<Long> consumeScript =
+            new DefaultRedisScript<>(CONSUME_SCRIPT, Long.class);
 
-    private final DefaultRedisScript<Long> refundScript;
-
-    public QuotaService(UserQuotaMapper userQuotaMapper, StringRedisTemplate redisTemplate) {
-        this.userQuotaMapper = userQuotaMapper;
-        this.redisTemplate = redisTemplate;
-        this.consumeScript = new DefaultRedisScript<>(CONSUME_SCRIPT, Long.class);
-        this.refundScript = new DefaultRedisScript<>(REFUND_SCRIPT, Long.class);
-    }
+    private final DefaultRedisScript<Long> refundScript =
+            new DefaultRedisScript<>(REFUND_SCRIPT, Long.class);
 
     /**
      * 新注册用户统一发免费套餐：总量不限、每日 100 条新建。

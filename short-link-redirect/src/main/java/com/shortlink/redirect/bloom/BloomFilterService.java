@@ -5,8 +5,7 @@ import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 import com.shortlink.redirect.entity.RedirectLink;
 import com.shortlink.redirect.mapper.RedirectLinkMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -23,9 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 加载完成后误判只可能导致一次多余的缓存查询，不会误杀真实链接。</p>
  */
 @Component
+@Slf4j
 public class BloomFilterService {
-
-    private static final Logger log = LoggerFactory.getLogger(BloomFilterService.class);
 
     private static final int BATCH_SIZE = 5000;
 

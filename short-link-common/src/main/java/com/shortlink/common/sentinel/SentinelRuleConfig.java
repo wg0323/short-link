@@ -10,8 +10,7 @@ import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowRule;
 import com.alibaba.csp.sentinel.slots.block.flow.param.ParamFlowRuleManager;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -28,9 +27,8 @@ import java.util.List;
  * Dashboard 地址留空则不上报。</p>
  */
 @Configuration
+@Slf4j
 public class SentinelRuleConfig {
-
-    private static final Logger log = LoggerFactory.getLogger(SentinelRuleConfig.class);
 
     private static final String FLOW_DATA_ID = "short-link.sentinel.flow.json";
 

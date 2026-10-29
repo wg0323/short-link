@@ -2,8 +2,8 @@ package com.shortlink.redirect.stat;
 
 import com.shortlink.redirect.event.ClickEvent;
 import com.shortlink.redirect.event.LocalQueueClickPublisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Component;
 
@@ -17,9 +17,9 @@ import java.util.concurrent.TimeUnit;
  * 把「每次点击一次写库」压缩成「一批一次写库」。
  */
 @Component
+@Slf4j
+@RequiredArgsConstructor
 public class ClickEventConsumer implements DisposableBean {
-
-    private static final Logger log = LoggerFactory.getLogger(ClickEventConsumer.class);
 
     private static final int MAX_BATCH = 500;
 
@@ -30,11 +30,6 @@ public class ClickEventConsumer implements DisposableBean {
     private volatile boolean running = true;
 
     private Thread worker;
-
-    public ClickEventConsumer(LocalQueueClickPublisher publisher, ClickStatWriter writer) {
-        this.publisher = publisher;
-        this.writer = writer;
-    }
 
     @PostConstruct
     public void start() {
